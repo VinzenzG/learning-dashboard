@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.env.local
+inbox/
+data/
+backend/data/
+output/
+*.db
+*.db-shm
+*.db-wal
+.DS_Store
