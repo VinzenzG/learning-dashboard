@@ -12,3 +12,4 @@ output/
 .vscode/
 playwright-report/
 test-results/
+.htpasswd
