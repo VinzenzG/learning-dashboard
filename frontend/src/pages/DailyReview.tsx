@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ArrowLeft, BookOpen, FolderOpen, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -15,11 +15,14 @@ type Phase = 'select' | 'review' | 'done';
 
 export function DailyReview() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
-  // Module selection
+  // Module selection — pre-select from URL ?module=
+  const urlModule = searchParams.get('module') ?? '';
   const [modules, setModules] = useState<string[]>([]);
-  const [selectedModule, setSelectedModule] = useState<string>('');
+  const [selectedModule, setSelectedModule] = useState<string>(urlModule);
   const [phase, setPhase] = useState<Phase>('select');
+  const autoStarted = useRef(false);
 
   // Review state
   const [queue, setQueue] = useState<SrsCard[]>([]);
@@ -40,6 +43,14 @@ export function DailyReview() {
       setModules(mods);
     }).catch(console.error);
   }, []);
+
+  // Auto-start when arriving via ?module= URL param
+  useEffect(() => {
+    if (urlModule && !autoStarted.current) {
+      autoStarted.current = true;
+      startReview();
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const startReview = async () => {
     setLoading(true);

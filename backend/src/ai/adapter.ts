@@ -38,6 +38,10 @@ export async function createAdapter(config: AppConfig): Promise<AIAdapter> {
       const { OllamaAdapter } = await import('./ollamaAdapter');
       return new OllamaAdapter(config.ollamaBaseUrl, config.ollamaModel);
     }
+    case 'none': {
+      const { NoneAdapter } = await import('./noneAdapter');
+      return new NoneAdapter();
+    }
     default:
       throw new Error(`Unknown AI provider: ${config.aiProvider}`);
   }

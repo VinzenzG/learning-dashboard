@@ -13,3 +13,4 @@ output/
 playwright-report/
 test-results/
 .htpasswd
+.env.production

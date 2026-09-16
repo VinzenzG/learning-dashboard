@@ -13,6 +13,7 @@ function ModuleGroup({ name, units }: { name: string | null; units: LearningUnit
   const [collapsed, setCollapsed] = useState(false);
   const navigate = useNavigate();
   const displayName = name ?? 'Ohne Modul';
+  const moduleDue = units.reduce((sum, u) => sum + (u.due_cards || 0), 0);
 
   return (
     <div className="space-y-3">
@@ -27,17 +28,30 @@ function ModuleGroup({ name, units }: { name: string | null; units: LearningUnit
           {displayName}
           <span className="font-normal">({units.length})</span>
         </button>
-        {name && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="ml-auto h-7 gap-1 text-xs"
-            onClick={() => navigate(`/exam?module=${encodeURIComponent(name)}`)}
-          >
-            <Trophy className="h-3 w-3" />
-            Prüfung
-          </Button>
-        )}
+        <div className="ml-auto flex gap-1.5">
+          {moduleDue > 0 && (
+            <Button
+              variant="default"
+              size="sm"
+              className="h-7 gap-1 text-xs"
+              onClick={() => navigate(name ? `/review?module=${encodeURIComponent(name)}` : '/review')}
+            >
+              <RotateCcw className="h-3 w-3" />
+              {moduleDue} lernen
+            </Button>
+          )}
+          {name && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 gap-1 text-xs"
+              onClick={() => navigate(`/exam?module=${encodeURIComponent(name)}`)}
+            >
+              <Trophy className="h-3 w-3" />
+              Prüfung
+            </Button>
+          )}
+        </div>
       </div>
 
       {!collapsed && (

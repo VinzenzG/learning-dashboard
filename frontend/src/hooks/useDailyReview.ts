@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { api } from '@/lib/api';
 import type { SrsCard, AwardResult } from '@/types/api';
 
-export function useDailyReview(limit = 20) {
+export function useDailyReview(limit = 20, moduleName?: string) {
   const [cards, setCards] = useState<SrsCard[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -11,7 +11,7 @@ export function useDailyReview(limit = 20) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await api.reviews.due(limit);
+      const data = await api.reviews.due(limit, true, moduleName);
       setCards(data.cards);
       setTotal(data.total);
       setError(null);
@@ -20,7 +20,7 @@ export function useDailyReview(limit = 20) {
     } finally {
       setLoading(false);
     }
-  }, [limit]);
+  }, [limit, moduleName]);
 
   const submitReview = useCallback(async (params: {
     cardId: number;
