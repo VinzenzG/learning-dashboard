@@ -40,8 +40,11 @@ export const api = {
   },
 
   reviews: {
-    due: (limit = 20, interleave = true) =>
-      req<{ cards: SrsCard[]; total: number }>(`/reviews/due?limit=${limit}&interleave=${interleave}`),
+    due: (limit = 20, interleave = true, moduleName?: string) => {
+      const params = new URLSearchParams({ limit: String(limit), interleave: String(interleave) });
+      if (moduleName) params.set('moduleName', moduleName);
+      return req<{ cards: SrsCard[]; total: number }>(`/reviews/due?${params}`);
+    },
     submit: (data: { cardId: number; quality: number; confidence?: number; timeMs?: number; sessionId?: number }) =>
       req<{ updatedCard: SrsCard; awards: AwardResult }>('/reviews', {
         method: 'POST',

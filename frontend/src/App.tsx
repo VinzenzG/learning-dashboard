@@ -8,6 +8,8 @@ import { Analytics } from '@/pages/Analytics';
 import { Achievements } from '@/pages/Achievements';
 import { Settings } from '@/pages/Settings';
 import { ExamMode } from '@/pages/ExamMode';
+import { Guide } from '@/pages/Guide';
+import { AppTour } from '@/components/tour/AppTour';
 
 function NotFound() {
   return (
@@ -20,6 +22,7 @@ function NotFound() {
 export default function App() {
   return (
     <BrowserRouter>
+      <AppTour />
       <Routes>
         <Route element={<AppLayout />}>
           <Route path="/" element={<Dashboard />} />
@@ -30,6 +33,7 @@ export default function App() {
           <Route path="/achievements" element={<Achievements />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/exam" element={<ExamMode />} />
+          <Route path="/guide" element={<Guide />} />
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>

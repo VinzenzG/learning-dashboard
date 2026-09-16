@@ -5,7 +5,10 @@
   "scripts": {
     "dev": "concurrently -n backend,frontend -c cyan,green \"npm run dev -w backend\" \"npm run dev -w frontend\"",
     "build": "npm run build -w backend && npm run build -w frontend",
-    "install:all": "npm install"
+    "install:all": "npm install",
+    "test": "npx playwright test",
+    "test:ui": "npx playwright test --ui",
+    "export-static": "node scripts/export-static.mjs"
   },
   "devDependencies": {
     "concurrently": "^9.1.0"

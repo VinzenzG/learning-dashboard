@@ -26,10 +26,12 @@ export function FlashCard({ card, onFlipped }: Props) {
     }
   };
 
+  const sourceLabel = [card.unit_title, card.source_hint].filter(Boolean).join(' · ');
+
   return (
     <div className="perspective w-full">
       <div
-        className={cn('card-inner min-h-[240px] cursor-pointer', flipped && 'flipped')}
+        className={cn('card-inner min-h-[260px] cursor-pointer', flipped && 'flipped')}
         onClick={handleFlip}
       >
         {/* Front */}
@@ -39,9 +41,17 @@ export function FlashCard({ card, onFlipped }: Props) {
             <span className="text-xs text-muted-foreground">{card.topic_tag}</span>
           </div>
           <p className="flex-1 text-lg font-medium leading-relaxed">{card.question_text}</p>
+
+          {sourceLabel && (
+            <div className="mt-4 flex items-center gap-1.5 rounded-md bg-muted/50 px-3 py-2">
+              <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground font-medium">{sourceLabel}</span>
+            </div>
+          )}
+
           {!flipped && (
-            <p className="mt-4 text-sm text-muted-foreground text-center">
-              Klicke zum Aufdecken
+            <p className="mt-3 text-sm text-muted-foreground text-center">
+              Klicken zum Aufdecken
             </p>
           )}
         </div>
@@ -55,12 +65,19 @@ export function FlashCard({ card, onFlipped }: Props) {
           <p className="flex-1 text-lg font-semibold leading-relaxed text-green-800 dark:text-green-200">
             {card.correct_answer}
           </p>
-          <div className="mt-3 pt-3 border-t space-y-2">
-            <p className="text-sm text-muted-foreground">{card.explanation}</p>
-            {card.source_hint && (
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground/70 pt-1">
-                <FileText className="h-3 w-3 shrink-0" />
-                <span>{card.unit_title} · {card.source_hint}</span>
+          <div className="mt-3 pt-3 border-t space-y-3">
+            {card.explanation && (
+              <p className="text-sm text-muted-foreground">{card.explanation}</p>
+            )}
+            {sourceLabel && (
+              <div className="flex items-center gap-2 rounded-md bg-white/60 dark:bg-black/20 border px-3 py-2">
+                <FileText className="h-3.5 w-3.5 shrink-0 text-primary" />
+                <div className="min-w-0">
+                  <span className="text-xs font-semibold text-primary">{card.unit_title}</span>
+                  {card.source_hint && (
+                    <span className="text-xs text-muted-foreground ml-1.5">{card.source_hint}</span>
+                  )}
+                </div>
               </div>
             )}
           </div>

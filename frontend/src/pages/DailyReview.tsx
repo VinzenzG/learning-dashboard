@@ -1,41 +1,74 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, BookOpen } from 'lucide-react';
+import { ArrowLeft, BookOpen, FolderOpen, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { FlashCard } from '@/components/flashcard/FlashCard';
 import { ConfidenceRater } from '@/components/quiz/ConfidenceRater';
 import { QualityRater } from '@/components/quiz/QualityRater';
 import { SessionSummary } from '@/components/quiz/SessionSummary';
-import { useDailyReview } from '@/hooks/useDailyReview';
 import { api } from '@/lib/api';
 import type { SrsCard, Badge } from '@/types/api';
 
+type Phase = 'select' | 'review' | 'done';
+
 export function DailyReview() {
   const navigate = useNavigate();
-  const { cards, total, loading, error, load } = useDailyReview(20);
-  const [sessionId, setSessionId] = useState<number | null>(null);
+
+  // Module selection
+  const [modules, setModules] = useState<string[]>([]);
+  const [selectedModule, setSelectedModule] = useState<string>('');
+  const [phase, setPhase] = useState<Phase>('select');
+
+  // Review state
   const [queue, setQueue] = useState<SrsCard[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [sessionId, setSessionId] = useState<number | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [confidence, setConfidence] = useState<number | null>(null);
   const [flipped, setFlipped] = useState(false);
-  const [done, setDone] = useState(false);
   const [correctCount, setCorrectCount] = useState(0);
   const [totalXp, setTotalXp] = useState(0);
   const [allNewBadges, setAllNewBadges] = useState<Badge[]>([]);
   const startTimeRef = useRef<number>(Date.now());
 
-  useEffect(() => { load(); }, [load]);
-
   useEffect(() => {
-    if (cards.length > 0) {
-      setQueue(cards);
-      api.sessions.create({ sessionType: 'daily_review' })
-        .then(d => setSessionId(d.id))
-        .catch(console.error);
+    api.learningUnits.list().then(({ units }) => {
+      const mods = [...new Set(units.map(u => u.module_name).filter(Boolean) as string[])].sort();
+      setModules(mods);
+    }).catch(console.error);
+  }, []);
+
+  const startReview = async () => {
+    setLoading(true);
+    try {
+      const mod = selectedModule || undefined;
+      const data = await api.reviews.due(50, true, mod);
+      if (data.cards.length === 0) {
+        setPhase('review');
+        setQueue([]);
+        setTotal(0);
+        return;
+      }
+      setQueue(data.cards);
+      setTotal(data.total);
+      setCurrentIndex(0);
+      setCorrectCount(0);
+      setTotalXp(0);
+      setAllNewBadges([]);
+      setFlipped(false);
+      setConfidence(null);
+      const s = await api.sessions.create({ sessionType: 'daily_review' });
+      setSessionId(s.id);
+      setPhase('review');
+    } catch (e) {
+      toast.error('Fehler beim Laden der Karten');
+    } finally {
+      setLoading(false);
     }
-  }, [cards]);
+  };
 
   const current = queue[currentIndex];
   const progressPct = queue.length > 0 ? (currentIndex / queue.length) * 100 : 0;
@@ -45,18 +78,14 @@ export function DailyReview() {
     startTimeRef.current = Date.now();
   };
 
-  // Keyboard shortcuts
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (done || !current) return;
-    if (e.key === ' ' && !flipped) {
-      e.preventDefault();
-      handleFlipped();
-    }
+    if (phase !== 'review' || !current) return;
+    if (e.key === ' ' && !flipped) { e.preventDefault(); handleFlipped(); }
     if (flipped) {
-      const qualityMap: Record<string, number> = { '1': 1, '2': 2, '3': 4, '4': 5 };
-      if (qualityMap[e.key]) handleQuality(qualityMap[e.key]);
+      const map: Record<string, number> = { '1': 1, '2': 2, '3': 4, '4': 5 };
+      if (map[e.key]) handleQuality(map[e.key]);
     }
-  }, [done, current, flipped]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [phase, current, flipped]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
@@ -66,31 +95,19 @@ export function DailyReview() {
   const handleQuality = async (quality: number) => {
     if (!current) return;
     const timeMs = Date.now() - startTimeRef.current;
-
-    const result = await api.reviews.submit({
-      cardId: current.id,
-      quality,
-      confidence: confidence ?? undefined,
-      timeMs,
-      sessionId: sessionId ?? undefined,
-    });
+    const result = await api.reviews.submit({ cardId: current.id, quality, confidence: confidence ?? undefined, timeMs, sessionId: sessionId ?? undefined });
 
     if (result) {
       if (quality >= 3) setCorrectCount(c => c + 1);
       setTotalXp(xp => xp + (result.awards?.xpDelta ?? 0));
       if (result.awards?.newBadges?.length) {
         setAllNewBadges(prev => [...prev, ...result.awards.newBadges]);
-        for (const b of result.awards.newBadges) {
-          toast.success(`Badge freigeschaltet: ${b.icon} ${b.name}`, { duration: 5000 });
-        }
+        for (const b of result.awards.newBadges) toast.success(`Badge: ${b.icon} ${b.name}`, { duration: 5000 });
       }
-      if (result.awards?.newLevel) {
-        toast.success(`Level Up! Du bist jetzt Level ${result.awards.newLevel} 🚀`, { duration: 5000 });
-      }
+      if (result.awards?.newLevel) toast.success(`Level Up! Level ${result.awards.newLevel} 🚀`, { duration: 5000 });
     }
 
     if (currentIndex + 1 >= queue.length) {
-      setDone(true);
       if (sessionId) {
         api.sessions.end(sessionId, {
           cardsStudied: queue.length,
@@ -98,6 +115,7 @@ export function DailyReview() {
           xpEarned: totalXp + (result?.awards?.xpDelta ?? 0),
         }).catch(console.error);
       }
+      setPhase('done');
     } else {
       setCurrentIndex(i => i + 1);
       setConfidence(null);
@@ -105,23 +123,79 @@ export function DailyReview() {
     }
   };
 
-  if (loading) return <div className="p-6 text-muted-foreground">Lade Karten…</div>;
-  if (error) return <div className="p-6 text-destructive">{error}</div>;
+  // ── Phase: Module selection ───────────────────────────────────────────────
+  if (phase === 'select') {
+    return (
+      <div className="p-6 max-w-lg mx-auto space-y-6">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-xl font-bold">Daily Review</h1>
+        </div>
 
-  if (queue.length === 0) {
+        <div className="rounded-lg border bg-card p-5 space-y-4">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <FolderOpen className="h-4 w-4" />
+            <span className="text-sm font-medium">Modul wählen</span>
+          </div>
+
+          <div className="space-y-2">
+            <label className="flex items-center gap-3 rounded-md border p-3 cursor-pointer hover:bg-accent transition-colors">
+              <input
+                type="radio"
+                name="module"
+                value=""
+                checked={selectedModule === ''}
+                onChange={() => setSelectedModule('')}
+                className="accent-primary"
+              />
+              <span className="text-sm font-medium">Alle Module</span>
+            </label>
+
+            {modules.map(mod => (
+              <label key={mod} className="flex items-center gap-3 rounded-md border p-3 cursor-pointer hover:bg-accent transition-colors">
+                <input
+                  type="radio"
+                  name="module"
+                  value={mod}
+                  checked={selectedModule === mod}
+                  onChange={() => setSelectedModule(mod)}
+                  className="accent-primary"
+                />
+                <span className="text-sm font-medium">{mod}</span>
+              </label>
+            ))}
+          </div>
+
+          <Button className="w-full gap-2" onClick={startReview} disabled={loading}>
+            <Play className="h-4 w-4" />
+            {loading ? 'Lade…' : 'Review starten'}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Phase: Empty ─────────────────────────────────────────────────────────
+  if (phase === 'review' && queue.length === 0) {
     return (
       <div className="p-6 flex flex-col items-center gap-4 max-w-xl mx-auto">
         <BookOpen className="h-16 w-16 text-green-500" />
         <h1 className="text-2xl font-bold text-center">Alle Karten erledigt!</h1>
         <p className="text-muted-foreground text-center">
-          Keine fälligen Karten für heute. Komm morgen wieder — dein Gehirn dankt es dir.
+          {selectedModule ? `Keine fälligen Karten in „${selectedModule}".` : 'Keine fälligen Karten für heute.'} Komm morgen wieder!
         </p>
-        <Button onClick={() => navigate('/')}>Zurück zum Dashboard</Button>
+        <div className="flex gap-3">
+          <Button variant="outline" onClick={() => setPhase('select')}>Anderes Modul</Button>
+          <Button onClick={() => navigate('/')}>Dashboard</Button>
+        </div>
       </div>
     );
   }
 
-  if (done) {
+  // ── Phase: Done ───────────────────────────────────────────────────────────
+  if (phase === 'done') {
     return (
       <div className="p-6 max-w-xl mx-auto">
         <SessionSummary
@@ -135,16 +209,20 @@ export function DailyReview() {
     );
   }
 
+  // ── Phase: Review ─────────────────────────────────────────────────────────
   return (
     <div className="p-6 space-y-4 max-w-2xl mx-auto">
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+        <Button variant="ghost" size="icon" onClick={() => setPhase('select')}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1">
           <div className="flex justify-between text-sm mb-1">
-            <span>Karte {currentIndex + 1} von {queue.length}</span>
-            <span className="text-muted-foreground">{total} fällig insgesamt</span>
+            <span>
+              Karte {currentIndex + 1} von {queue.length}
+              {selectedModule && <span className="text-muted-foreground ml-2">· {selectedModule}</span>}
+            </span>
+            <span className="text-muted-foreground">{total} fällig gesamt</span>
           </div>
           <Progress value={progressPct} className="h-2" />
         </div>
@@ -156,13 +234,10 @@ export function DailyReview() {
 
       {current && (
         <>
-          <FlashCard card={current} onFlipped={handleFlipped} />
-
+          {/* key=currentIndex forces remount → resets flip state */}
+          <FlashCard key={currentIndex} card={current} onFlipped={handleFlipped} />
           <ConfidenceRater value={confidence} onChange={setConfidence} />
-
-          {flipped && (
-            <QualityRater onRate={handleQuality} />
-          )}
+          {flipped && <QualityRater onRate={handleQuality} />}
         </>
       )}
     </div>

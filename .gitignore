@@ -9,3 +9,6 @@ output/
 *.db-shm
 *.db-wal
 .DS_Store
+.vscode/
+playwright-report/
+test-results/

@@ -84,18 +84,21 @@ export async function processFile(filePath: string, moduleName: string | null = 
         : `${isSlide ? 'Folien' : 'Seiten'} ${chunk.slideStart}–${chunk.slideEnd}`;
 
       for (const q of questions) {
+        // Skip questions missing required fields
+        if (!q.question_text?.trim() || !q.correct_answer?.trim()) continue;
+
         const validTypes = ['mc', 'truefalse', 'fillin', 'shortanswer', 'feynman'];
         if (!validTypes.includes(q.question_type)) q.question_type = 'shortanswer';
         if (q.question_type === 'mc' && !Array.isArray(q.options)) q.options = null;
 
         const qId = insertQuestion({
           unit_id: unitId,
-          question_text: q.question_text,
+          question_text: q.question_text.trim(),
           question_type: q.question_type as 'mc' | 'truefalse' | 'fillin' | 'shortanswer' | 'feynman',
           options: q.options ? JSON.stringify(q.options) : null,
-          correct_answer: q.correct_answer,
-          explanation: q.explanation,
-          topic_tag: q.topic_tag || 'General',
+          correct_answer: q.correct_answer.trim(),
+          explanation: q.explanation?.trim() || '–',
+          topic_tag: q.topic_tag?.trim() || 'General',
           difficulty: Math.min(5, Math.max(1, Math.round(q.difficulty || 3))),
           source_hint: sourceHint,
         });
@@ -155,18 +158,20 @@ export async function deepenTopic(
 
   let added = 0;
   for (const q of questions) {
+    if (!q.question_text?.trim() || !q.correct_answer?.trim()) continue;
+
     const validTypes = ['mc', 'truefalse', 'fillin', 'shortanswer', 'feynman'];
     if (!validTypes.includes(q.question_type)) q.question_type = 'shortanswer';
     if (q.question_type === 'mc' && !Array.isArray(q.options)) q.options = null;
 
     const qId = insertQuestion({
       unit_id: unitId,
-      question_text: q.question_text,
+      question_text: q.question_text.trim(),
       question_type: q.question_type as 'mc' | 'truefalse' | 'fillin' | 'shortanswer' | 'feynman',
       options: q.options ? JSON.stringify(q.options) : null,
-      correct_answer: q.correct_answer,
-      explanation: q.explanation,
-      topic_tag: q.topic_tag || tag,
+      correct_answer: q.correct_answer.trim(),
+      explanation: q.explanation?.trim() || '–',
+      topic_tag: q.topic_tag?.trim() || tag,
       difficulty: Math.min(5, Math.max(1, Math.round(q.difficulty || 4))),
     });
     insertCard(qId);

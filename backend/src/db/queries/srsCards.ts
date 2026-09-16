@@ -38,18 +38,20 @@ export function getCardById(id: number): SrsCard | null {
   return (db.prepare(`SELECT * FROM srs_cards WHERE id = ?`).get(id) as SrsCard | undefined) ?? null;
 }
 
-export function getDueCards(limit: number = 20, interleave: boolean = true): SrsCardWithQuestion[] {
+export function getDueCards(limit: number = 20, interleave: boolean = true, moduleName?: string): SrsCardWithQuestion[] {
   const db = getDb();
+  const whereModule = moduleName ? `AND u.module_name = '${moduleName.replace(/'/g, "''")}'` : '';
   const cards = db.prepare(`
     SELECT c.*, q.question_text, q.question_type, q.options, q.correct_answer,
            q.explanation, q.topic_tag, q.difficulty, q.source_hint, q.unit_id,
-           u.title AS unit_title
+           u.title AS unit_title, u.module_name
     FROM srs_cards c
     JOIN questions q ON q.id = c.question_id
     JOIN learning_units u ON u.id = q.unit_id
     WHERE c.next_review_at <= datetime('now')
       AND c.status != 'mastered'
       AND u.status = 'ready'
+      ${whereModule}
     ORDER BY c.next_review_at ASC
     LIMIT ?
   `).all(limit * 3) as SrsCardWithQuestion[];
@@ -74,8 +76,9 @@ export function getDueCards(limit: number = 20, interleave: boolean = true): Srs
   return interleaved;
 }
 
-export function getTotalDueCount(): number {
+export function getTotalDueCount(moduleName?: string): number {
   const db = getDb();
+  const whereModule = moduleName ? `AND u.module_name = '${moduleName.replace(/'/g, "''")}'` : '';
   const row = db.prepare(`
     SELECT COUNT(*) AS cnt FROM srs_cards c
     JOIN questions q ON q.id = c.question_id
@@ -83,6 +86,7 @@ export function getTotalDueCount(): number {
     WHERE c.next_review_at <= datetime('now')
       AND c.status != 'mastered'
       AND u.status = 'ready'
+      ${whereModule}
   `).get() as { cnt: number };
   return row.cnt;
 }

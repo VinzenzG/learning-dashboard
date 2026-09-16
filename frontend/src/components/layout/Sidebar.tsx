@@ -1,16 +1,17 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, RotateCcw, BarChart3, Trophy, GraduationCap, Settings, BookOpen, Flame, Sun, Moon } from 'lucide-react';
+import { LayoutDashboard, RotateCcw, BarChart3, Trophy, GraduationCap, Settings, BookOpen, Flame, Sun, Moon, HelpCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useDarkMode } from '@/hooks/useDarkMode';
 import { Button } from '@/components/ui/button';
 
 const navItems = [
-  { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/review', icon: RotateCcw, label: 'Daily Review' },
-  { to: '/exam', icon: GraduationCap, label: 'Prüfung' },
-  { to: '/analytics', icon: BarChart3, label: 'Analytics' },
-  { to: '/achievements', icon: Trophy, label: 'Achievements' },
-  { to: '/settings', icon: Settings, label: 'Settings' },
+  { to: '/', icon: LayoutDashboard, label: 'Dashboard', id: 'nav-dashboard' },
+  { to: '/review', icon: RotateCcw, label: 'Daily Review', id: 'nav-review' },
+  { to: '/exam', icon: GraduationCap, label: 'Prüfung', id: 'nav-exam' },
+  { to: '/analytics', icon: BarChart3, label: 'Analytics', id: 'nav-analytics' },
+  { to: '/achievements', icon: Trophy, label: 'Achievements', id: 'nav-achievements' },
+  { to: '/settings', icon: Settings, label: 'Settings', id: 'nav-settings' },
+  { to: '/guide', icon: HelpCircle, label: 'Hilfe', id: 'nav-guide' },
 ];
 
 interface SidebarProps {
@@ -27,10 +28,11 @@ export function Sidebar({ streak, dueCount }: SidebarProps) {
         <span className="text-lg font-bold">LearnDash</span>
       </div>
 
-      <nav className="flex-1 space-y-1">
-        {navItems.map(({ to, icon: Icon, label }) => (
+      <nav id="sidebar-nav" className="flex-1 space-y-1">
+        {navItems.map(({ to, icon: Icon, label, id }) => (
           <NavLink
             key={to}
+            id={id}
             to={to}
             end={to === '/'}
             className={({ isActive }) =>

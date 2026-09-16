@@ -9,8 +9,9 @@ const router = Router();
 router.get('/due', (req: Request, res: Response) => {
   const limit = parseInt(String(req.query.limit ?? '20'));
   const interleave = req.query.interleave !== 'false';
-  const cards = getDueCards(limit, interleave);
-  const total = getTotalDueCount();
+  const moduleName = req.query.moduleName ? String(req.query.moduleName) : undefined;
+  const cards = getDueCards(limit, interleave, moduleName);
+  const total = getTotalDueCount(moduleName);
   res.json({ cards, total });
 });
 

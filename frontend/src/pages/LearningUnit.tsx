@@ -4,7 +4,8 @@ import { api } from '@/lib/api';
 import type { LearningUnit as LU, Question, WeakSpot } from '@/types/api';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Play, RefreshCw, Loader2, TrendingUp, ChevronDown, ChevronRight } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { ArrowLeft, Play, RefreshCw, Loader2, TrendingUp, ChevronDown, ChevronRight, Settings2 } from 'lucide-react';
 
 const typeLabel: Record<string, string> = {
   mc: 'Multiple Choice',
@@ -29,6 +30,8 @@ export function LearningUnitPage() {
   const [deepeningTopic, setDeepeningTopic] = useState<string | null>(null);
   const [deepenedTopics, setDeepenedTopics] = useState<Set<string>>(new Set());
   const [showQuestions, setShowQuestions] = useState(false);
+  const [questionsPerChunk, setQuestionsPerChunk] = useState(6);
+  const [showReprocessOptions, setShowReprocessOptions] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -46,6 +49,7 @@ export function LearningUnitPage() {
   const handleReprocess = async () => {
     if (!id) return;
     setReprocessing(true);
+    await api.settings.update({ questionsPerChunk }).catch(console.error);
     await api.learningUnits.reprocess(parseInt(id)).catch(console.error);
     setTimeout(() => { navigate(0); }, 1000);
   };
@@ -76,8 +80,8 @@ export function LearningUnitPage() {
           <h1 className="text-xl font-bold truncate">{unit.title}</h1>
           <p className="text-xs text-muted-foreground">{unit.file_name} · {unit.slide_count} Folien</p>
         </div>
-        <Button variant="outline" size="sm" onClick={handleReprocess} disabled={reprocessing}>
-          {reprocessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+        <Button variant="outline" size="sm" onClick={() => setShowReprocessOptions(v => !v)} disabled={reprocessing}>
+          <Settings2 className="h-4 w-4" />
           Neu verarbeiten
         </Button>
         {unit.due_cards! > 0 && (
@@ -102,6 +106,37 @@ export function LearningUnitPage() {
           </div>
         ))}
       </div>
+
+      {/* Reprocess options panel */}
+      {showReprocessOptions && (
+        <div className="rounded-lg border bg-muted/40 p-4 space-y-3">
+          <p className="text-sm font-medium flex items-center gap-2">
+            <RefreshCw className="h-4 w-4" />
+            Neu verarbeiten — Einstellungen
+          </p>
+          <div className="flex items-center gap-3">
+            <label className="text-sm text-muted-foreground whitespace-nowrap">Fragen pro Chunk</label>
+            <Input
+              type="number"
+              min={2}
+              max={15}
+              value={questionsPerChunk}
+              onChange={e => setQuestionsPerChunk(Math.max(2, Math.min(15, parseInt(e.target.value) || 6)))}
+              className="w-24"
+            />
+            <span className="text-xs text-muted-foreground">(2–15, Standard: 6)</span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Alle bestehenden Fragen dieser Einheit werden gelöscht und mit der neuen Einstellung neu generiert.
+          </p>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={handleReprocess} disabled={reprocessing} variant="destructive">
+              {reprocessing ? <><Loader2 className="h-3 w-3 animate-spin mr-1" />Verarbeite…</> : 'Jetzt neu verarbeiten'}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setShowReprocessOptions(false)}>Abbrechen</Button>
+          </div>
+        </div>
+      )}
 
       {/* Topic breakdown with Vertiefen */}
       {questions.length > 0 && (() => {
