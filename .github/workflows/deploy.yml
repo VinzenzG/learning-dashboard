@@ -3,7 +3,6 @@ name: Deploy to Netcup
 on:
   push:
     branches: [main]
-  workflow_dispatch:
 
 jobs:
   deploy:
@@ -20,7 +19,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build frontend
+      - name: Build
         run: npm run build -w frontend
 
       - name: Deploy via SCP
@@ -30,7 +29,7 @@ jobs:
           username: ${{ secrets.NETCUP_SSH_USER }}
           password: ${{ secrets.NETCUP_SSH_PASSWORD }}
           source: "frontend/dist/."
-          target: "${{ secrets.NETCUP_REMOTE_PATH }}"
+          target: "/learning.enter.vision/httpdocs"
           strip_components: 2
           rm: false
 
@@ -39,6 +38,6 @@ jobs:
           sleep 10
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
             -u "${{ secrets.HTPASSWD_USER }}:${{ secrets.HTPASSWD_PASS }}" \
-            "https://${{ secrets.NETCUP_DOMAIN }}")
+            https://learning.enter.vision)
           echo "HTTP Status: $STATUS"
           [ "$STATUS" = "200" ] || (echo "Smoke test failed" && exit 1)
